@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard - Fluxo de Importação</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar__title">
+          <img class="topbar__logo" src="./logo.png" alt="Logo" />
+          <div>
+            <h1>Dashboard de Processos de Importação</h1>
+            <p>Lista de processos com a fase atual do fluxo operacional.</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="summary">
+          <div class="kpi-grid">
+            <article class="kpi-card">
+              <div class="kpi-card__head">
+                <div class="kpi-card__title">Processos</div>
+                <div class="kpi-card__icon kpi-card__icon--orange" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3v18M3 12h18" />
+                  </svg>
+                </div>
+              </div>
+              <div id="totalCount" class="kpi-card__value">0</div>
+              <div class="kpi-card__sub">Total (com filtros)</div>
+            </article>
+
+            <article class="kpi-card" data-phase="A embarcar">
+              <div class="kpi-card__head">
+                <div class="kpi-card__title">A embarcar</div>
+                <div class="kpi-card__icon kpi-card__icon--green" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18" />
+                    <path d="M7 8l-4 4 4 4" />
+                    <path d="M17 8l4 4-4 4" />
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-card__value" data-role="phase-count">0</div>
+              <div class="kpi-card__sub">Processos</div>
+            </article>
+
+            <article class="kpi-card" data-phase="Em Trânsito">
+              <div class="kpi-card__head">
+                <div class="kpi-card__title">Em Trânsito</div>
+                <div class="kpi-card__icon kpi-card__icon--blue" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18" />
+                    <path d="M12 3l3 3-3 3-3-3 3-3Z" />
+                    <path d="M12 15l3 3-3 3-3-3 3-3Z" />
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-card__value" data-role="phase-count">0</div>
+              <div class="kpi-card__sub">Processos</div>
+              <button class="kpi-regime-trigger" type="button" aria-label="Ver segmentação por registro">
+                <span class="kpi-regime-trigger__dot" aria-hidden="true"></span>
+                Registro
+                <span class="kpi-regime-trigger__info" aria-hidden="true">i</span>
+              </button>
+              <div class="kpi-card__segments" aria-label="Segmentação por registro">
+                <div class="kpi-seg kpi-seg--registrado">
+                  <div class="kpi-seg__top">
+                    <span class="kpi-seg__dot" aria-hidden="true"></span>
+                    <span class="kpi-seg__label">Em trânsito registrado</span>
+                  </div>
+                  <span class="kpi-seg__value" data-role="transito-registrado">0</span>
+                </div>
+                <div class="kpi-seg kpi-seg--nao-registrado">
+                  <div class="kpi-seg__top">
+                    <span class="kpi-seg__dot" aria-hidden="true"></span>
+                    <span class="kpi-seg__label">Em trânsito a registrar</span>
+                  </div>
+                  <span class="kpi-seg__value" data-role="transito-nao-registrado">0</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="kpi-card" data-phase="A Registrar">
+              <div class="kpi-card__head">
+                <div class="kpi-card__title">A Registrar</div>
+                <div class="kpi-card__icon kpi-card__icon--indigo" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 6h13" />
+                    <path d="M8 12h13" />
+                    <path d="M8 18h13" />
+                    <path d="M3 6h.01" />
+                    <path d="M3 12h.01" />
+                    <path d="M3 18h.01" />
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-card__value" data-role="phase-count">0</div>
+              <div class="kpi-card__sub">Processos</div>
+              <button class="kpi-regime-trigger" type="button" aria-label="Ver segmentação por regime">
+                <span class="kpi-regime-trigger__dot" aria-hidden="true"></span>
+                Regime
+                <span class="kpi-regime-trigger__info" aria-hidden="true">i</span>
+              </button>
+              <div class="kpi-card__segments" aria-label="Segmentação por regime">
+                <div class="kpi-seg kpi-seg--entreposto">
+                  <div class="kpi-seg__top">
+                    <span class="kpi-seg__dot" aria-hidden="true"></span>
+                    <span class="kpi-seg__label">Entreposto</span>
+                  </div>
+                  <span class="kpi-seg__value" data-role="regime-entreposto">0</span>
+                </div>
+                <div class="kpi-seg kpi-seg--consumo">
+                  <div class="kpi-seg__top">
+                    <span class="kpi-seg__dot" aria-hidden="true"></span>
+                    <span class="kpi-seg__label">Consumo</span>
+                  </div>
+                  <span class="kpi-seg__value" data-role="regime-consumo">0</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="kpi-card" data-phase="A Desembaraçar">
+              <div class="kpi-card__head">
+                <div class="kpi-card__title">A Desembaraçar</div>
+                <div class="kpi-card__icon kpi-card__icon--purple" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3l8 4v10l-8 4-8-4V7l8-4Z" />
+                    <path d="M12 7v14" />
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-card__value" data-role="phase-count">0</div>
+              <div class="kpi-card__sub">Processos</div>
+            </article>
+
+            <article class="kpi-card" data-phase="A Carregar">
+              <div class="kpi-card__head">
+                <div class="kpi-card__title">A Carregar</div>
+                <div class="kpi-card__icon kpi-card__icon--teal" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7h13v10H3z" />
+                    <path d="M16 10h4l1 2v5h-5z" />
+                    <path d="M7 17a2 2 0 1 0 0.001 0Z" />
+                    <path d="M18 17a2 2 0 1 0 0.001 0Z" />
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-card__value" data-role="phase-count">0</div>
+              <div class="kpi-card__sub">Processos</div>
+            </article>
+          </div>
+
+          <div class="summary__tools">
+            <div class="summary__controls" role="search" aria-label="Filtros e Excel">
+              <label class="field field--compact">
+                <span class="field__label">Abertura (De)</span>
+                <input id="openFrom" class="field__input" type="date" />
+              </label>
+
+              <label class="field field--compact">
+                <span class="field__label">Abertura (Até)</span>
+                <input id="openTo" class="field__input" type="date" />
+              </label>
+
+              <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+
+              <label class="field field--compact field--search">
+                <span class="field__label">Buscar</span>
+                <input id="searchInput" class="field__input" placeholder="Ex.: ref cliente, cliente..." />
+              </label>
+
+              <label class="field field--compact">
+                <span class="field__label">Filtrar por fase</span>
+                <select id="phaseFilter" class="field__select"></select>
+              </label>
+
+              <label class="field field--compact">
+                <span class="field__label">Filtrar por equipe</span>
+                <select id="teamFilter" class="field__select">
+                  <option value="all">Todas as equipes</option>
+                </select>
+              </label>
+
+              <button id="resetBtn" class="btn btn--ghost" type="button">Limpar</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header">
+            <h2>Processos</h2>
+            <div id="resultsMeta" class="panel__meta">0 resultados</div>
+          </div>
+          <div id="processList" class="process-list" aria-live="polite"></div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="footer__hint">
+          Exibindo o fluxo com a fase atual e a data por etapa.
+        </div>
+      </footer>
+    </div>
+
+    <!-- Chatbot -->
+    <div id="chatbot" class="chatbot">
+      <div class="chatbot__header">
+        <div class="chatbot__title">Assistente Operacional</div>
+        <button id="closeChat" class="chatbot__close" aria-label="Fechar chat">&times;</button>
+      </div>
+      <div id="chatMessages" class="chatbot__messages">
+        <div class="chat-msg chat-msg--bot">Olá! Como posso ajudar você hoje?</div>
+      </div>
+      <div class="chatbot__input-area">
+        <input id="chatInput" type="text" placeholder="Digite sua mensagem..." aria-label="Mensagem do chat" />
+        <button id="sendChat" class="chatbot__send" aria-label="Enviar mensagem">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <button id="openChat" class="chatbot-trigger" aria-label="Abrir chat">
+      <div id="chatInvite" class="chatbot-invite">Tire suas dúvidas do operacional aqui!</div>
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    </button>
+
+    <!-- Notificações (Alertas) -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
+
