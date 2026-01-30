@@ -508,6 +508,14 @@ function mapRowsToProcesses(rows) {
     "prev_chegada",
     "prev chegada",
   ]);
+  const priDtaAutoembH = pickFirstHeader(headersNormToOrig, [
+    "pri_dta_autoemb",
+    "pri dta autoemb",
+    "pri_dta_auto_emb",
+    "pri dta auto emb",
+    "data_autoembarque",
+    "data autoembarque",
+  ]);
 
   const phaseDateHeaders = Object.fromEntries(
     PHASES.map((ph) => [ph, findPhaseDateHeader(headersNormToOrig, ph)])
@@ -531,6 +539,7 @@ function mapRowsToProcesses(rows) {
     const dtaChegadaBl = dtaChegadaBlH ? isoFromAnyDateValue(row[dtaChegadaBlH]) : "";
     const registroDi = registroDiH ? String((row[registroDiH] || "").trim()) : "";
     const previsaoChegada = previsaoChegadaH ? isoFromAnyDateValue(row[previsaoChegadaH]) : "";
+    const priDtaAutoemb = priDtaAutoembH ? isoFromAnyDateValue(row[priDtaAutoembH]) : "";
 
     // ignora linhas vazias
     if (!id && !cliente && !refCliente && !clienteNome && !fornecedor && !modal && !origem) continue;
@@ -570,6 +579,7 @@ function mapRowsToProcesses(rows) {
       dtaChegadaBl,
       registroDi,
       previsaoChegada,
+      priDtaAutoemb,
     });
   }
 
@@ -744,6 +754,10 @@ async function tryLoadFromWebhook({ from, to, operacional, signal } = {}) {
     const previsaoChegadaRaw = o.previsaoChegada ?? o.previsao_chegada ?? o.PREVISAO_CHEGADA ?? o["PREVISAO CHEGADA"] ?? "";
     const previsaoChegada = previsaoChegadaRaw ? isoFromAnyDateValue(previsaoChegadaRaw) : "";
     
+    // Processa PRI_DTA_AUTOEMB (data de autoembarque)
+    const priDtaAutoembRaw = o.priDtaAutoemb ?? o.pri_dta_autoemb ?? o.PRI_DTA_AUTOEMB ?? o["PRI DTA AUTOEMB"] ?? "";
+    const priDtaAutoemb = priDtaAutoembRaw ? isoFromAnyDateValue(priDtaAutoembRaw) : "";
+    
     // REGISTRO_DI pode ser uma data (timestamp ISO) ou um número de registro
     // Tenta primeiro como data, se não funcionar, trata como string
     const registroDiRaw = o.registroDi ?? o.registro_di ?? o.REGISTRO_DI ?? o["REGISTRO DI"] ?? o.di ?? o.DI ?? o.numero_di ?? o.NUMERO_DI ?? "";
@@ -786,6 +800,7 @@ async function tryLoadFromWebhook({ from, to, operacional, signal } = {}) {
       dtaChegadaBl: String(dtaChegadaBl || "").trim(),
       registroDi: String(registroDi || "").trim(),
       previsaoChegada: String(previsaoChegada || "").trim(),
+      priDtaAutoemb: String(priDtaAutoemb || "").trim(),
     };
   }
 
@@ -1031,6 +1046,7 @@ function renderCard(p) {
   const previsaoChegadaBr = formatDateBr(p.previsaoChegada);
   const dtaEmbarqueBlBr = formatDateBr(p.dtaEmbarqueBl);
   const dtaChegadaBlBr = formatDateBr(p.dtaChegadaBl);
+  const priDtaAutoembBr = formatDateBr(p.priDtaAutoemb);
   
   // REGISTRO_DI pode ser uma data ou um número de registro
   let registroDiDisplay = "";
@@ -1073,6 +1089,7 @@ function renderCard(p) {
             <span class="chip"><span class="chip__dot"></span>Modal: ${escapeHtml(p.modal)}</span>
             <span class="chip"><span class="chip__dot"></span>Origem: ${escapeHtml(p.origem)}</span>
             <span class="chip"><span class="chip__dot"></span>Abertura: ${escapeHtml(aberturaBr || "-")}</span>
+            ${priDtaAutoembBr ? `<span class="chip"><span class="chip__dot"></span>Data Autoembarque: ${escapeHtml(priDtaAutoembBr)}</span>` : ""}
             ${previsaoChegadaBr ? `<span class="chip"><span class="chip__dot"></span>Previsão de Chegada: ${escapeHtml(previsaoChegadaBr)}</span>` : ""}
             ${dtaEmbarqueBlBr ? `<span class="chip"><span class="chip__dot"></span>Embarque BL: ${escapeHtml(dtaEmbarqueBlBr)}</span>` : ""}
             ${dtaChegadaBlBr ? `<span class="chip"><span class="chip__dot"></span>Chegada BL: ${escapeHtml(dtaChegadaBlBr)}</span>` : ""}
