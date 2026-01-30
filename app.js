@@ -210,6 +210,7 @@ function isoFromDateParts(y, m, d) {
 
 function isoFromAnyDateValue(v) {
   if (!v) return "";
+  
   // Date (quando cellDates = true)
   if (v instanceof Date && !Number.isNaN(v.getTime())) {
     return isoFromDateParts(v.getFullYear(), v.getMonth() + 1, v.getDate());
@@ -223,8 +224,15 @@ function isoFromAnyDateValue(v) {
     }
   }
 
-  // String em formatos comuns (dd/mm/yyyy, yyyy-mm-dd)
   const s = String(v).trim();
+  
+  // Timestamp ISO (ex: "2025-01-19T23:00:00.000Z" ou "2025-01-19T23:00:00.000")
+  const isoTimestampMatch = /^(\d{4})-(\d{2})-(\d{2})T/.exec(s);
+  if (isoTimestampMatch) {
+    return isoFromDateParts(Number(isoTimestampMatch[1]), Number(isoTimestampMatch[2]), Number(isoTimestampMatch[3]));
+  }
+  
+  // String em formatos comuns (dd/mm/yyyy, yyyy-mm-dd)
   const m1 = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
   if (m1) return isoFromDateParts(Number(m1[3]), Number(m1[2]), Number(m1[1]));
   const m2 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
@@ -446,7 +454,15 @@ function mapRowsToProcesses(rows) {
     "data_abertura_",
     "dataabertura",
   ]);
-  const modalH = pickFirstHeader(headersNormToOrig, ["modal", "transporte", "modalidade"]);
+  const modalH = pickFirstHeader(headersNormToOrig, [
+    "modal",
+    "transporte",
+    "modalidade",
+    "modal de transporte",
+    "modal_de_transporte",
+    "modalidade de importacao",
+    "modalidade_de_importacao",
+  ]);
   const origemH = pickFirstHeader(headersNormToOrig, ["origem", "orig"]);
   const faseH = pickFirstHeader(headersNormToOrig, ["fase", "fase atual", "fase_atual", "status", "etapa", "fluxo"]);
   const tipoRegimeH = pickFirstHeader(headersNormToOrig, [
@@ -485,6 +501,13 @@ function mapRowsToProcesses(rows) {
     "num_di",
     "num di",
   ]);
+  const previsaoChegadaH = pickFirstHeader(headersNormToOrig, [
+    "previsao_chegada",
+    "previsao chegada",
+    "previsao chegada bl",
+    "prev_chegada",
+    "prev chegada",
+  ]);
 
   const phaseDateHeaders = Object.fromEntries(
     PHASES.map((ph) => [ph, findPhaseDateHeader(headersNormToOrig, ph)])
@@ -507,6 +530,7 @@ function mapRowsToProcesses(rows) {
     const dtaEmbarqueBl = dtaEmbarqueBlH ? isoFromAnyDateValue(row[dtaEmbarqueBlH]) : "";
     const dtaChegadaBl = dtaChegadaBlH ? isoFromAnyDateValue(row[dtaChegadaBlH]) : "";
     const registroDi = registroDiH ? String((row[registroDiH] || "").trim()) : "";
+    const previsaoChegada = previsaoChegadaH ? isoFromAnyDateValue(row[previsaoChegadaH]) : "";
 
     // ignora linhas vazias
     if (!id && !cliente && !refCliente && !clienteNome && !fornecedor && !modal && !origem) continue;
@@ -545,6 +569,7 @@ function mapRowsToProcesses(rows) {
       dtaEmbarqueBl,
       dtaChegadaBl,
       registroDi,
+      previsaoChegada,
     });
   }
 
@@ -687,39 +712,56 @@ async function tryLoadFromWebhook({ from, to, operacional, signal } = {}) {
     const clienteNome = String(o.clienteNome ?? o.cliente_nome ?? o.CLIENTE ?? o.cliente ?? "").trim();
     const fornecedor = String(o.fornecedor ?? o.FORNECEDOR ?? "").trim();
     const responsavel = String(o.responsavel ?? o.responsável ?? o.RESPONSÁVEL ?? o.RESPONSAVEL ?? "").trim();
-    const modal = String(o.modal ?? o.MODAL ?? "").trim();
+    
+    // Mapeia MODAL_DE_TRANSPORTE para modal
+    const modal = String(
+      o.modal ?? 
+      o.MODAL ?? 
+      o.MODAL_DE_TRANSPORTE ?? 
+      o.modal_de_transporte ?? 
+      o["MODAL DE TRANSPORTE"] ?? 
+      ""
+    ).trim();
+    
     const origem = String(o.origem ?? o.ORIGEM ?? "").trim();
     const tipoRegime = String(o.tipoRegime ?? o.tipo_regime ?? o.TIPO_REGIME ?? "").trim();
 
+    // Processa DATA_ABERTURA (formato brasileiro DD/MM/YYYY ou ISO)
     const aberturaIso =
       o.aberturaIso
         ? String(o.aberturaIso).trim()
-        : isoFromAnyDateValue(o.abertura ?? o.ABERTURA ?? o["DATA ABERTURA"] ?? o["DT ABERTURA"]);
+        : isoFromAnyDateValue(o.abertura ?? o.ABERTURA ?? o.DATA_ABERTURA ?? o["DATA ABERTURA"] ?? o["DT ABERTURA"]);
 
-    const dtaEmbarqueBl =
-      o.dtaEmbarqueBl
-        ? String(o.dtaEmbarqueBl).trim()
-        : isoFromAnyDateValue(o.dta_embarque_bl ?? o.DTA_EMBARQUE_BL ?? o["DTA EMBARQUE BL"] ?? o["DATA EMBARQUE BL"] ?? o.embarque ?? o.EMBARQUE ?? "");
+    // Processa DTA_EMBARQUE_BL (pode vir como timestamp ISO)
+    const dtaEmbarqueBlRaw = o.dtaEmbarqueBl ?? o.dta_embarque_bl ?? o.DTA_EMBARQUE_BL ?? o["DTA EMBARQUE BL"] ?? o["DATA EMBARQUE BL"] ?? o.embarque ?? o.EMBARQUE ?? "";
+    const dtaEmbarqueBl = dtaEmbarqueBlRaw ? isoFromAnyDateValue(dtaEmbarqueBlRaw) : "";
     
-    const dtaChegadaBl =
-      o.dtaChegadaBl
-        ? String(o.dtaChegadaBl).trim()
-        : isoFromAnyDateValue(o.dta_chegada_bl ?? o.DTA_CHEGADA_BL ?? o["DTA CHEGADA BL"] ?? o["DATA CHEGADA BL"] ?? o.chegada ?? o.CHEGADA ?? "");
+    // Processa DTA_CHEGADA_BL (pode vir como timestamp ISO)
+    const dtaChegadaBlRaw = o.dtaChegadaBl ?? o.dta_chegada_bl ?? o.DTA_CHEGADA_BL ?? o["DTA CHEGADA BL"] ?? o["DATA CHEGADA BL"] ?? o.chegada ?? o.CHEGADA ?? "";
+    const dtaChegadaBl = dtaChegadaBlRaw ? isoFromAnyDateValue(dtaChegadaBlRaw) : "";
     
-    const registroDi = String(
-      o.registroDi ??
-      o.registro_di ??
-      o.REGISTRO_DI ??
-      o["REGISTRO DI"] ??
-      o.di ??
-      o.DI ??
-      o.numero_di ??
-      o.NUMERO_DI ??
-      ""
-    ).trim();
+    // Processa PREVISAO_CHEGADA (nova data)
+    const previsaoChegadaRaw = o.previsaoChegada ?? o.previsao_chegada ?? o.PREVISAO_CHEGADA ?? o["PREVISAO CHEGADA"] ?? "";
+    const previsaoChegada = previsaoChegadaRaw ? isoFromAnyDateValue(previsaoChegadaRaw) : "";
+    
+    // REGISTRO_DI pode ser uma data (timestamp ISO) ou um número de registro
+    // Tenta primeiro como data, se não funcionar, trata como string
+    const registroDiRaw = o.registroDi ?? o.registro_di ?? o.REGISTRO_DI ?? o["REGISTRO DI"] ?? o.di ?? o.DI ?? o.numero_di ?? o.NUMERO_DI ?? "";
+    let registroDi = "";
+    if (registroDiRaw) {
+      // Se parece ser um timestamp ISO ou data, tenta converter
+      const asDate = isoFromAnyDateValue(registroDiRaw);
+      if (asDate && isValidIsoDateStr(asDate)) {
+        // É uma data, mantém como data ISO
+        registroDi = asDate;
+      } else {
+        // Não é data, trata como string (número de registro)
+        registroDi = String(registroDiRaw).trim();
+      }
+    }
 
     const faseOriginal =
-      String(o.faseAtual ?? o.fase_atual ?? o["FASE ATUAL"] ?? o.fase ?? o.FASE ?? "").trim() ||
+      String(o.faseAtual ?? o.fase_atual ?? o["FASE ATUAL"] ?? o.FASE_ATUAL ?? o.fase ?? o.FASE ?? "").trim() ||
       String(o.status ?? o.STATUS ?? "").trim();
     let faseAtual = statusToPhase(faseOriginal) || matchPhaseLabel(faseOriginal) || "";
 
@@ -743,6 +785,7 @@ async function tryLoadFromWebhook({ from, to, operacional, signal } = {}) {
       dtaEmbarqueBl: String(dtaEmbarqueBl || "").trim(),
       dtaChegadaBl: String(dtaChegadaBl || "").trim(),
       registroDi: String(registroDi || "").trim(),
+      previsaoChegada: String(previsaoChegada || "").trim(),
     };
   }
 
@@ -985,6 +1028,22 @@ function renderCard(p) {
   const idx = phaseIndex(p.faseAtual);
   const pct = clamp(((idx + 1) / PHASES.length) * 100, 0, 100);
   const aberturaBr = formatDateBr(p.aberturaIso);
+  const previsaoChegadaBr = formatDateBr(p.previsaoChegada);
+  const dtaEmbarqueBlBr = formatDateBr(p.dtaEmbarqueBl);
+  const dtaChegadaBlBr = formatDateBr(p.dtaChegadaBl);
+  
+  // REGISTRO_DI pode ser uma data ou um número de registro
+  let registroDiDisplay = "";
+  if (p.registroDi) {
+    if (isValidIsoDateStr(p.registroDi)) {
+      // É uma data, formata como data
+      registroDiDisplay = formatDateBr(p.registroDi);
+    } else {
+      // É um número de registro, exibe como está
+      registroDiDisplay = String(p.registroDi).trim();
+    }
+  }
+  
   const clienteLabel = p.clienteNome ? `Cliente: ${p.clienteNome}` : "Cliente:";
   const refLabel = p.refCliente ? `Ref: ${p.refCliente}` : "";
 
@@ -1014,6 +1073,10 @@ function renderCard(p) {
             <span class="chip"><span class="chip__dot"></span>Modal: ${escapeHtml(p.modal)}</span>
             <span class="chip"><span class="chip__dot"></span>Origem: ${escapeHtml(p.origem)}</span>
             <span class="chip"><span class="chip__dot"></span>Abertura: ${escapeHtml(aberturaBr || "-")}</span>
+            ${previsaoChegadaBr ? `<span class="chip"><span class="chip__dot"></span>Previsão de Chegada: ${escapeHtml(previsaoChegadaBr)}</span>` : ""}
+            ${dtaEmbarqueBlBr ? `<span class="chip"><span class="chip__dot"></span>Embarque BL: ${escapeHtml(dtaEmbarqueBlBr)}</span>` : ""}
+            ${dtaChegadaBlBr ? `<span class="chip"><span class="chip__dot"></span>Chegada BL: ${escapeHtml(dtaChegadaBlBr)}</span>` : ""}
+            ${registroDiDisplay ? `<span class="chip"><span class="chip__dot"></span>Registro DI: ${escapeHtml(registroDiDisplay)}</span>` : ""}
           </div>
         </div>
       </div>
@@ -1122,10 +1185,129 @@ function attachEvents() {
     });
   }
 
+  // Controles de redimensionamento do chat
+  const resizeSmallBtn = document.getElementById("resizeChatSmall");
+  const resizeMediumBtn = document.getElementById("resizeChatMedium");
+  const resizeLargeBtn = document.getElementById("resizeChatLarge");
+
+  function setChatSize(size) {
+    if (!chatBot) return;
+    
+    // Remove todas as classes de tamanho
+    chatBot.classList.remove("chatbot--small", "chatbot--medium", "chatbot--large");
+    
+    // Adiciona a classe do tamanho selecionado
+    chatBot.classList.add(`chatbot--${size}`);
+    
+    // Atualiza o estado ativo dos botões
+    [resizeSmallBtn, resizeMediumBtn, resizeLargeBtn].forEach(btn => {
+      if (btn) btn.classList.remove("active");
+    });
+    
+    if (size === "small" && resizeSmallBtn) resizeSmallBtn.classList.add("active");
+    if (size === "medium" && resizeMediumBtn) resizeMediumBtn.classList.add("active");
+    if (size === "large" && resizeLargeBtn) resizeLargeBtn.classList.add("active");
+    
+    // Salva a preferência no localStorage
+    try {
+      localStorage.setItem("chatbotSize", size);
+    } catch (e) {
+      // Ignora erros de localStorage
+    }
+  }
+
+  // Carrega o tamanho salvo ou usa o padrão (small)
+  function loadChatSize() {
+    try {
+      const savedSize = localStorage.getItem("chatbotSize") || "small";
+      setChatSize(savedSize);
+    } catch (e) {
+      setChatSize("small");
+    }
+  }
+
+  // Inicializa com o tamanho salvo
+  loadChatSize();
+
+  // Event listeners para os botões de resize
+  if (resizeSmallBtn) {
+    resizeSmallBtn.addEventListener("click", () => setChatSize("small"));
+  }
+  if (resizeMediumBtn) {
+    resizeMediumBtn.addEventListener("click", () => setChatSize("medium"));
+  }
+  if (resizeLargeBtn) {
+    resizeLargeBtn.addEventListener("click", () => setChatSize("large"));
+  }
+
+  function formatChatText(text) {
+    if (!text) return "";
+    
+    // Escapa HTML para segurança
+    let formatted = escapeHtml(text);
+    
+    // Processa listas primeiro (antes de converter \n em <br>)
+    const lines = formatted.split('\n');
+    const processedLines = [];
+    let inList = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const listMatch = line.match(/^[-*]\s+(.+)$/);
+      
+      if (listMatch) {
+        if (!inList) {
+          processedLines.push('<ul>');
+          inList = true;
+        }
+        processedLines.push(`<li>${listMatch[1]}</li>`);
+      } else {
+        if (inList) {
+          processedLines.push('</ul>');
+          inList = false;
+        }
+        if (line.trim()) {
+          processedLines.push(line);
+        } else {
+          processedLines.push('');
+        }
+      }
+    }
+    
+    if (inList) {
+      processedLines.push('</ul>');
+    }
+    
+    formatted = processedLines.join('\n');
+    
+    // Converte quebras de linha em <br> (exceto onde já há tags HTML de lista)
+    formatted = formatted.replace(/\n(?![</])/g, "<br>");
+    // Remove <br> antes de tags de fechamento de lista
+    formatted = formatted.replace(/<br><\/ul>/g, '</ul>');
+    formatted = formatted.replace(/<br><\/li>/g, '</li>');
+    
+    // Converte URLs em links clicáveis
+    const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+    formatted = formatted.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    
+    // Formata texto em negrito (**texto** ou __texto__)
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    
+    // Formata texto em itálico (*texto* ou _texto_) - apenas se não for parte de **
+    formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    formatted = formatted.replace(/(?<!_)_(?!_)([^_\n]+?)(?<!_)_(?!_)/g, '<em>$1</em>');
+    
+    // Formata código inline (`código`)
+    formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    return formatted;
+  }
+
   function addChatMessage(text, side) {
     const msg = document.createElement("div");
     msg.className = `chat-msg chat-msg--${side}`;
-    msg.textContent = text;
+    msg.innerHTML = formatChatText(text);
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -1185,15 +1367,25 @@ function attachEvents() {
 
   async function sendToChatbotAPI(text) {
     try {
+      // Obtém a equipe selecionada no filtro
+      const selectedTeam = els.teamFilter?.value || "all";
+      
+      // Se for "all", envia "OPERACIONAL%" para o chat
+      // Se for uma equipe específica, remove espaços (ex: "Operacional 1" -> "Operacional1")
+      const sessionId = selectedTeam === "all" 
+        ? "OPERACIONAL%" 
+        : selectedTeam.replace(/\s+/g, "");
+      
       const response = await fetch(CHATBOT_WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: text,
+          chatInput: text,
           timestamp: new Date().toISOString(),
-          context: "operacional_dashboard"
+          context: "operacional_dashboard",
+          sessionId: sessionId
         }),
       });
 
@@ -1242,6 +1434,13 @@ function attachEvents() {
 
 function init() {
   buildPhaseFilterOptions();
+  
+  // Define datas padrão: início em 1º de janeiro de 2025 e fim hoje
+  const today = new Date();
+  const todayIso = isoFromDateParts(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  if (els.openFrom) els.openFrom.value = "2025-01-01";
+  if (els.openTo) els.openTo.value = todayIso;
+  
   attachEvents();
   syncDateInputs();
 
